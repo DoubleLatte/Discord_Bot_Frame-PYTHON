@@ -33,7 +33,8 @@ class MyBot(commands.Bot):
             application_id=config.get("application_id")
         )
         self.config = config
-        self.extensions_list = ["command.paper", "command.dev"]  # 확장 기능 리스트
+        self.administrator_role_ids = config.get("administrator_role_ids", [])
+        self.extensions_list = ["command.example", "command.dev"]  # 확장 기능 리스트
     
     async def setup_hook(self):
         """봇 초기 설정 및 확장 기능 로드"""

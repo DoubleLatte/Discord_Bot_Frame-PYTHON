@@ -1,0 +1,6 @@
+application_id: "봇 ID"
+
+token: "봇 토큰"
+
+administrator_role_ids:
+  - 관리자 역활 id
