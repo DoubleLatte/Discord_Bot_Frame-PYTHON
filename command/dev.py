@@ -4,7 +4,8 @@ import discord
 from discord import app_commands, Interaction
 from discord.ext import commands
 
-from utils.checks import has_admin_role
+from core.bot import MyBot
+from core.checks import has_admin_role
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +15,7 @@ log = logging.getLogger(__name__)
 class DevCommands(commands.GroupCog, group_name="dev", group_description="개발자용 명령어"):
     """개발자를 위한 명령어 관리 Cog (/dev reload, /dev load ...)"""
 
-    def __init__(self, bot: commands.Bot) -> None:
+    def __init__(self, bot: MyBot) -> None:
         self.bot = bot
         super().__init__()
 
@@ -72,11 +73,7 @@ class DevCommands(commands.GroupCog, group_name="dev", group_description="개발
     async def sync_command(self, interaction: Interaction, scope: str = "guild") -> None:
         await interaction.response.defer(ephemeral=True)
         try:
-            if scope == "guild":
-                self.bot.tree.copy_global_to(guild=interaction.guild)
-                synced = await self.bot.tree.sync(guild=interaction.guild)
-            else:
-                synced = await self.bot.tree.sync()
+            synced = await self.bot.sync_commands(interaction.guild if scope == "guild" else None)
             await interaction.followup.send(f"✅ {len(synced)}개의 명령어 동기화 완료 ({scope})", ephemeral=True)
         except discord.HTTPException as e:
             await interaction.followup.send(f"❌ 명령어 동기화 중 오류: {e}", ephemeral=True)
@@ -95,6 +92,6 @@ class DevCommands(commands.GroupCog, group_name="dev", group_description="개발
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-async def setup(bot: commands.Bot) -> None:
+async def setup(bot: MyBot) -> None:
     await bot.add_cog(DevCommands(bot))
     log.info("DevCommands cog 로드 완료")

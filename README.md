@@ -11,9 +11,11 @@ python main.py
 ```
 
 ## 구조
-- `main.py` — 봇 본체. `command/` 폴더의 `.py`를 자동 로드 (`_`로 시작하는 파일 제외)
+- `main.py` — 진입점. `command/` 폴더의 `.py`를 자동 로드 (`_`로 시작하는 파일 제외)
 - `command/dev.py` — `/dev reload|load|unload|sync|extensions` (관리자 전용)
 - `command/example.py` — 새 명령어 작성 예시
-- `utils/checks.py` — `has_admin_role()` 권한 체크
+- `core/config.py` — 설정 로드·검증 (읽기 전용 `Config`)
+- `core/bot.py` — `MyBot` (Cog 자동 로드, 동기화, 공통 오류 처리, `is_admin`)
+- `core/checks.py` — `has_admin_role()` 권한 체크
 
 개발 중엔 `config.yml`의 `dev_guild_id`를 설정하면 명령어가 해당 서버에 즉시 반영됩니다.
