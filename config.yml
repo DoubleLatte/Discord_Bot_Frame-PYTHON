@@ -1,6 +1,12 @@
-application_id: "봇 ID"
+application_id: 123456789012345678  # 봇 ID (숫자)
 
+# 토큰은 DISCORD_TOKEN 환경변수 사용 권장 (설정 시 아래 값보다 우선)
 token: "봇 토큰"
 
+# 설정하면 이 서버에만 명령어를 즉시 동기화 (개발용, 비우면 글로벌 동기화)
+dev_guild_id:
+
+activity: "~~~ 하는중"
+
 administrator_role_ids:
-  - 관리자 역활 id
+  - 123456789012345678  # 관리자 역할 ID
