@@ -1,4 +1,5 @@
-application_id: 123456789012345678  # 봇 ID (숫자)
+# 봇(애플리케이션) ID. 비우면 로그인 시 자동으로 가져옴 (잘못된 값이면 명령어 동기화 실패)
+application_id:
 
 # 토큰은 DISCORD_TOKEN 환경변수 사용 권장 (설정 시 아래 값보다 우선)
 token: "봇 토큰"
@@ -6,7 +7,11 @@ token: "봇 토큰"
 # 설정하면 이 서버에만 명령어를 즉시 동기화 (개발용, 비우면 글로벌 동기화)
 dev_guild_id:
 
+# 봇 상태 메시지 (비우면 표시 안 함)
 activity: "~~~ 하는중"
+
+# 서버 멤버 목록·입퇴장 이벤트가 필요할 때만 true (개발자 포털에서 Server Members Intent도 켜야 함)
+members_intent: false
 
 administrator_role_ids:
   - 123456789012345678  # 관리자 역할 ID

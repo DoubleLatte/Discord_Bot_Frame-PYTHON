@@ -9,18 +9,24 @@ from core.config import Config
 
 log = logging.getLogger(__name__)
 
-# 오류 종류별 사용자 안내 메시지 (위에서부터 먼저 매칭)
+# 오류 종류별 사용자 안내 메시지 (위에서부터 먼저 매칭, {e}는 오류 객체)
 ERROR_MESSAGES: list[tuple[type[Exception], str]] = [
     (app_commands.NoPrivateMessage, "이 명령어는 서버에서만 사용할 수 있습니다."),
-    (app_commands.CommandOnCooldown, "쿨다운 중입니다. 잠시 후 다시 시도하세요."),
+    (app_commands.CommandOnCooldown, "쿨다운 중입니다. {e.retry_after:.1f}초 후 다시 시도하세요."),
+    (app_commands.BotMissingPermissions, "봇에게 이 명령어를 실행할 권한이 없습니다. 서버 관리자에게 문의하세요."),
     (app_commands.CheckFailure, "이 명령어를 사용할 권한이 없습니다."),
+    (app_commands.TransformerError, "입력값이 올바르지 않습니다."),
+    # 코드와 Discord에 등록된 명령어가 다를 때 (동기화 필요)
+    (app_commands.CommandNotFound, "명령어 정보가 최신이 아닙니다. 잠시 후 다시 시도하세요."),
+    (app_commands.CommandSignatureMismatch, "명령어 정보가 최신이 아닙니다. 잠시 후 다시 시도하세요."),
 ]
 DEFAULT_ERROR_MESSAGE = "명령어 실행 중 오류가 발생했습니다."
 
 
-def build_intents() -> discord.Intents:
+def build_intents(members: bool) -> discord.Intents:
     intents = discord.Intents.default()
-    intents.members = True  # 필요 없으면 끄세요 (개발자 포털에서도 활성화 필요)
+    intents.typing = False  # 슬래시 명령어 봇엔 불필요한 이벤트
+    intents.members = members  # 켜려면 개발자 포털에서도 Server Members Intent 활성화 필요
     return intents
 
 
@@ -29,9 +35,11 @@ class MyBot(commands.Bot):
     def __init__(self, config: Config, extension_dir: Path) -> None:
         super().__init__(
             command_prefix=commands.when_mentioned,
-            intents=build_intents(),
+            help_command=None,  # 접두사 명령어를 쓰지 않으므로 기본 help 제거
+            intents=build_intents(config.members_intent),
             application_id=config.application_id,
-            activity=discord.Game(config.activity),
+            activity=discord.Game(config.activity) if config.activity else None,
+            max_messages=None,  # 메시지 캐시 끔 (메모리 절약, on_message_edit 등이 필요하면 제거)
         )
         self._config = config
         self._extension_dir = extension_dir
@@ -49,8 +57,8 @@ class MyBot(commands.Bot):
         if not isinstance(user, discord.Member):
             return False
 
-        user_role_ids = {role.id for role in user.roles}
-        return not user_role_ids.isdisjoint(self._config.admin_role_ids)
+        # user.roles는 서버 캐시에 있는 역할만 돌려주므로, interaction 데이터의 역할 ID 목록(_roles)을 직접 비교
+        return not self._config.admin_role_ids.isdisjoint(user._roles)
 
     async def sync_commands(self, guild: discord.abc.Snowflake | None = None) -> list[app_commands.AppCommand]:
         """슬래시 명령어 동기화. guild를 주면 해당 서버에만 즉시 반영"""
@@ -63,6 +71,7 @@ class MyBot(commands.Bot):
     # ── 시작 과정 ────────────────────────────────────────
 
     async def setup_hook(self) -> None:
+        # 로그인 직후 한 번만 실행 (on_ready는 재연결마다 다시 호출되므로 초기화는 여기서)
         await self._load_all_extensions()
         await self._initial_sync()
 
@@ -104,14 +113,18 @@ class MyBot(commands.Bot):
         if message == DEFAULT_ERROR_MESSAGE:
             command_name = interaction.command.qualified_name if interaction.command else "알 수 없음"
             log.error("명령어 오류: %s", command_name, exc_info=error)
+        elif isinstance(error, (app_commands.CommandNotFound, app_commands.CommandSignatureMismatch)):
+            log.warning("등록된 명령어와 코드가 다릅니다. 동기화가 필요합니다: %s", error)
 
-        await self._reply_error(interaction, message)
+        # 자동완성 요청에는 메시지로 응답할 수 없음
+        if interaction.type is not discord.InteractionType.autocomplete:
+            await self._reply_error(interaction, message)
 
     @staticmethod
     def _error_message_for(error: Exception) -> str:
         for error_type, message in ERROR_MESSAGES:
             if isinstance(error, error_type):
-                return message
+                return message.format(e=error)
         return DEFAULT_ERROR_MESSAGE
 
     @staticmethod
@@ -123,5 +136,5 @@ class MyBot(commands.Bot):
                 await interaction.followup.send(content, ephemeral=True)
             else:
                 await interaction.response.send_message(content, ephemeral=True)
-        except discord.HTTPException:
-            log.warning("오류 메시지 전송 실패 (interaction 만료 등)")
+        except (discord.HTTPException, discord.InteractionResponded) as e:
+            log.warning("오류 메시지 전송 실패 (interaction 만료 등): %s", e)
