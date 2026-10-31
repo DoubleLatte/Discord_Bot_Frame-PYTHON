@@ -14,7 +14,7 @@ try:
 except ImportError:
     run = asyncio.run
 
-# PyInstaller로 빌드한 경우: 코드(command/)는 번들 내부, config.yml은 실행 파일 옆에서 읽음
+# PyInstaller로 빌드한 경우: 코드(domains/)는 번들 내부, config.yml은 실행 파일 옆에서 읽음
 if getattr(sys, "frozen", False):
     APP_DIR = Path(sys.executable).resolve().parent
 else:
@@ -25,7 +25,7 @@ BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", APP_DIR))
 async def main() -> None:
     config = Config.load(APP_DIR / "config.yml")
 
-    async with MyBot(config, extension_dir=BUNDLE_DIR / "command") as bot:
+    async with MyBot(config, extension_dir=BUNDLE_DIR / "domains") as bot:
         await bot.start(config.token)
 
 

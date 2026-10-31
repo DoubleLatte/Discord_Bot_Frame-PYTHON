@@ -1,12 +1,8 @@
-import logging
-
 from discord import app_commands, Interaction
 from discord.ext import commands
 
 from core.bot import MyBot
-from core.checks import has_admin_role
-
-log = logging.getLogger(__name__)
+from domains.checks import has_admin_role
 
 
 class Example(commands.Cog):
@@ -21,8 +17,3 @@ class Example(commands.Cog):
     @has_admin_role()
     async def example_command(self, interaction: Interaction) -> None:
         await interaction.response.send_message("테스트")
-
-
-async def setup(bot: MyBot) -> None:
-    await bot.add_cog(Example(bot))
-    log.info("Example cog 로드 완료")
